@@ -43,6 +43,12 @@ namespace ZombieRunner.Spawning
                 enabled = false;
                 return;
             }
+            if (ObjectPooler.Instance == null || !ObjectPooler.Instance.IsReady)
+            {
+                Debug.LogError("[HordeSpawner] No ready ObjectPooler in the scene, so no zombies can spawn.", this);
+                enabled = false;
+                return;
+            }
             nextSpawnZ = playerTransform.position.z + firstClusterOffsetZ;
         }
 

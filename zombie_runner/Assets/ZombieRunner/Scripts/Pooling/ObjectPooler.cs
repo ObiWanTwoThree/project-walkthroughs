@@ -30,6 +30,9 @@ namespace ZombieRunner.Pooling
         public ComponentPool<Bullet> Bullets { get; private set; }
         public ComponentPool<ZombieAgent> Zombies { get; private set; }
 
+        /// <summary>True once both pools exist. False if a prefab field was left empty.</summary>
+        public bool IsReady => Bullets != null && Zombies != null;
+
         private void Awake()
         {
             if (Instance != null && Instance != this)
@@ -38,6 +41,13 @@ namespace ZombieRunner.Pooling
                 return;
             }
             Instance = this;
+
+            if (bulletPrefab == null || zombiePrefab == null)
+            {
+                Debug.LogError("[ObjectPooler] Bullet Prefab and Zombie Prefab must both be assigned in the Inspector. " +
+                               "Drag them in from Assets/ZombieRunner/Generated.", this);
+                return;
+            }
 
             Bullets = new ComponentPool<Bullet>(bulletPrefab, bulletPrewarm, MakeFolder("Pool_Bullet"), "Bullet");
             Zombies = new ComponentPool<ZombieAgent>(zombiePrefab, zombiePrewarm, MakeFolder("Pool_Zombie"), "Zombie");

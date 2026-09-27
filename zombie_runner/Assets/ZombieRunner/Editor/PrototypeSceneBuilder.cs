@@ -54,6 +54,15 @@ namespace ZombieRunner.EditorTools
                                  "Assign a URP asset in Project Settings > Graphics and re-run the builder to get URP Simple Lit materials.");
             }
 
+            // Open the new scene before creating assets: switching scenes can unload assets loaded earlier,
+            // which would leave the prefab references wired below pointing at nothing.
+            var scene = EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Single);
+            RenderSettings.fog = true;
+            RenderSettings.fogMode = FogMode.Linear;
+            RenderSettings.fogColor = SkyColor;
+            RenderSettings.fogStartDistance = 35f;
+            RenderSettings.fogEndDistance = 75f;
+
             Material squadMat = CreateMaterial("Squad", new Color(0.24f, 0.55f, 0.95f));
             Material zombieMat = CreateMaterial("Zombie", new Color(0.45f, 0.58f, 0.34f));
             Material flashMat = CreateMaterial("ZombieFlash", Color.white, Color.white);
@@ -63,13 +72,6 @@ namespace ZombieRunner.EditorTools
 
             Bullet bulletPrefab = CreateBulletPrefab(bulletMat);
             ZombieAgent zombiePrefab = CreateZombiePrefab(zombieMat, flashMat, zombieLayer);
-
-            var scene = EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Single);
-            RenderSettings.fog = true;
-            RenderSettings.fogMode = FogMode.Linear;
-            RenderSettings.fogColor = SkyColor;
-            RenderSettings.fogStartDistance = 35f;
-            RenderSettings.fogEndDistance = 75f;
 
             // [Managers]
             var managers = new GameObject("[Managers]");
@@ -100,6 +102,8 @@ namespace ZombieRunner.EditorTools
                     light.shadows = LightShadows.Hard;
                 }
             }
+
+            if (!VerifyReferences(pooler, spawner, squad)) return;
 
             EditorSceneManager.SaveScene(scene, ScenePath);
             AddSceneToBuildSettings(ScenePath);
@@ -224,9 +228,10 @@ namespace ZombieRunner.EditorTools
         private static T SavePrefab<T>(GameObject go, string name) where T : Component
         {
             string path = $"{GeneratedDir}/{name}.prefab";
-            GameObject prefab = PrefabUtility.SaveAsPrefabAsset(go, path);
+            PrefabUtility.SaveAsPrefabAsset(go, path);
             Object.DestroyImmediate(go);
-            return prefab.GetComponent<T>();
+            // Reload from disk so the reference is to the saved asset, not an in-memory object.
+            return AssetDatabase.LoadAssetAtPath<GameObject>(path).GetComponent<T>();
         }
 
         // ---------- materials ----------
@@ -313,6 +318,25 @@ namespace ZombieRunner.EditorTools
         }
 
         // ---------- helpers ----------
+
+        private static bool VerifyReferences(Object pooler, Object spawner, GameObject squad)
+        {
+            var missing = new System.Collections.Generic.List<string>();
+            CheckReference(pooler, "bulletPrefab", "ObjectPooler > Bullet Prefab", missing);
+            CheckReference(pooler, "zombiePrefab", "ObjectPooler > Zombie Prefab", missing);
+            CheckReference(spawner, "playerTransform", "HordeSpawner > Player Transform", missing);
+            CheckReference(squad.GetComponent<SquadShooter>(), "firePoint", "SquadShooter > Fire Point", missing);
+            if (missing.Count == 0) return true;
+
+            Debug.LogError("[Zombie Runner] The scene was built but these references are empty: " + string.Join(", ", missing) +
+                           ". Assign them in the Inspector, or run the builder again.");
+            return false;
+        }
+
+        private static void CheckReference(Object target, string property, string label, System.Collections.Generic.List<string> missing)
+        {
+            if (new SerializedObject(target).FindProperty(property).objectReferenceValue == null) missing.Add(label);
+        }
 
         private static GameObject CreatePrimitive(PrimitiveType type, string name, Transform parent, Material mat, bool castShadows = false)
         {

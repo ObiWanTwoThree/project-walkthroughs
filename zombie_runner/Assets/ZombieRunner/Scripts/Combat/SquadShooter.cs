@@ -44,6 +44,15 @@ namespace ZombieRunner.Combat
             nextFireTime = Time.time;
         }
 
+        private void Start()
+        {
+            if (ObjectPooler.Instance == null || !ObjectPooler.Instance.IsReady)
+            {
+                Debug.LogError("[SquadShooter] No ready ObjectPooler in the scene, so the squad can't fire.", this);
+                enabled = false;
+            }
+        }
+
         private void Update()
         {
             float now = Time.time;
