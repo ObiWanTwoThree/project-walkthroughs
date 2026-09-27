@@ -1,0 +1,14 @@
+{
+  "name": "Brass Orrery",
+  "short_name": "Orrery",
+  "description": "A one-thumb orbit game: swap orbits, dodge asteroids, gather starlight.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "portrait",
+  "background_color": "#101A33",
+  "theme_color": "#101A33",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
